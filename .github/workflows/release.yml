@@ -91,10 +91,8 @@ jobs:
           git clone https://github.com/twilson63/hype.git hype-source
           cd hype-source
           
-          # Build hype for the target platform
-          export GOOS=${{ matrix.goos }}
-          export GOARCH=${{ matrix.goarch }}
-          go build -o ../hype${{ matrix.goos == 'windows' && '.exe' || '' }} .
+          # Build hype for the host platform (Linux amd64) to run the build process
+          go build -o ../hype .
           
           cd ..
           rm -rf hype-source
@@ -107,8 +105,8 @@ jobs:
             EXT=".exe"
           fi
           
-          # Build the binary using hype
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} ./hype${{ matrix.goos == 'windows' && '.exe' || '' }} build lmdb-tree-viewer.lua -o lmdb-tree-viewer-${{ matrix.target }}${EXT}
+          # Build the binary using hype with cross-compilation
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} ./hype build lmdb-tree-viewer.lua -o lmdb-tree-viewer-${{ matrix.target }}${EXT}
           
           # Verify the binary was created
           ls -la lmdb-tree-viewer-${{ matrix.target }}${EXT}
