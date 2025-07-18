@@ -1,0 +1,192 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            ## What's Changed
+            
+            - See [CHANGELOG.md](CHANGELOG.md) for detailed changes
+            
+            ## Installation
+            
+            ### Quick Install
+            ```bash
+            curl -sSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | bash
+            ```
+            
+            ### Manual Install
+            1. Download the appropriate binary for your platform below
+            2. Make it executable: `chmod +x lmdb-tree-viewer`
+            3. Move to your PATH: `mv lmdb-tree-viewer /usr/local/bin/`
+            
+            ### Requirements
+            - **mdb_dump**: LMDB utilities package
+              - macOS: `brew install lmdb`
+              - Ubuntu/Debian: `apt-get install lmdb-utils`
+              - CentOS/RHEL: `yum install lmdb-utils`
+            
+            ## Usage
+            
+            ```bash
+            # Full tree visualization
+            mdb_dump /path/to/database.lmdb | lmdb-tree-viewer
+            
+            # Summary mode
+            mdb_dump /path/to/database.lmdb | lmdb-tree-viewer --summary
+            ```
+          draft: false
+          prerelease: false
+
+  build-binaries:
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-amd64
+            binary_name: lmdb-tree-viewer
+          - os: ubuntu-latest
+            target: linux-arm64
+            binary_name: lmdb-tree-viewer
+          - os: macos-latest
+            target: darwin-amd64
+            binary_name: lmdb-tree-viewer
+          - os: macos-latest
+            target: darwin-arm64
+            binary_name: lmdb-tree-viewer
+          - os: windows-latest
+            target: windows-amd64
+            binary_name: lmdb-tree-viewer.exe
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Build Hype Runtime
+        run: |
+          # Clone hype repository to get the runtime
+          git clone https://github.com/username/hype.git hype-source
+          cd hype-source
+          
+          # Build hype for the target platform
+          case "${{ matrix.target }}" in
+            linux-amd64)
+              GOOS=linux GOARCH=amd64 go build -o ../hype-${{ matrix.target }} .
+              ;;
+            linux-arm64)
+              GOOS=linux GOARCH=arm64 go build -o ../hype-${{ matrix.target }} .
+              ;;
+            darwin-amd64)
+              GOOS=darwin GOARCH=amd64 go build -o ../hype-${{ matrix.target }} .
+              ;;
+            darwin-arm64)
+              GOOS=darwin GOARCH=arm64 go build -o ../hype-${{ matrix.target }} .
+              ;;
+            windows-amd64)
+              GOOS=windows GOARCH=amd64 go build -o ../hype-${{ matrix.target }}.exe .
+              ;;
+          esac
+          
+          cd ..
+          rm -rf hype-source
+      
+      - name: Create Distribution Package
+        run: |
+          mkdir -p dist
+          cp lmdb-tree-viewer.lua dist/
+          cp hype-${{ matrix.target }}* dist/hype
+          
+          # Create the wrapper script
+          cat > dist/lmdb-tree-viewer << 'EOF'
+          #!/bin/bash
+          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          "$SCRIPT_DIR/hype" run "$SCRIPT_DIR/lmdb-tree-viewer.lua" -- "$@"
+          EOF
+          
+          chmod +x dist/lmdb-tree-viewer
+          
+          # For Windows, create a .bat wrapper
+          if [[ "${{ matrix.target }}" == windows-* ]]; then
+            cat > dist/lmdb-tree-viewer.bat << 'EOF'
+          @echo off
+          set SCRIPT_DIR=%~dp0
+          "%SCRIPT_DIR%\hype.exe" run "%SCRIPT_DIR%\lmdb-tree-viewer.lua" -- %*
+          EOF
+          fi
+      
+      - name: Create Archive
+        run: |
+          cd dist
+          if [[ "${{ matrix.target }}" == windows-* ]]; then
+            zip -r ../lmdb-tree-viewer-${{ matrix.target }}.zip .
+            echo "ASSET_PATH=lmdb-tree-viewer-${{ matrix.target }}.zip" >> $GITHUB_ENV
+            echo "ASSET_CONTENT_TYPE=application/zip" >> $GITHUB_ENV
+          else
+            tar -czf ../lmdb-tree-viewer-${{ matrix.target }}.tar.gz .
+            echo "ASSET_PATH=lmdb-tree-viewer-${{ matrix.target }}.tar.gz" >> $GITHUB_ENV
+            echo "ASSET_CONTENT_TYPE=application/gzip" >> $GITHUB_ENV
+          fi
+      
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.ASSET_PATH }}
+          asset_name: ${{ env.ASSET_PATH }}
+          asset_content_type: ${{ env.ASSET_CONTENT_TYPE }}
+
+  test-binaries:
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install LMDB utilities
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lmdb-utils
+      
+      - name: Download and test binary
+        run: |
+          # Download the Linux binary
+          curl -L -o lmdb-tree-viewer.tar.gz \
+            "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/lmdb-tree-viewer-linux-amd64.tar.gz"
+          
+          # Extract and test
+          tar -xzf lmdb-tree-viewer.tar.gz
+          chmod +x lmdb-tree-viewer
+          
+          # Test help command
+          ./lmdb-tree-viewer --help
+          
+          # Test version command
+          ./lmdb-tree-viewer --version
+          
+          echo "✅ Binary test passed!"
