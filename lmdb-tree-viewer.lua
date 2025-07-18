@@ -260,7 +260,7 @@ end
 
 local function show_version()
     print("lmdb-tree-viewer v1.0.0")
-    print("https://github.com/username/lmdb-tree-viewer")
+    print("https://github.com/twilson63/lmdb-tree-viewer")
 end
 
 local function main(args)

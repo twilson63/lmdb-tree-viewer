@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # LMDB Tree Viewer Installation Script
-# Usage: curl -sSL https://raw.githubusercontent.com/username/lmdb-tree-viewer/main/install.sh | bash
+# Usage: curl -sSL https://raw.githubusercontent.com/twilson63/lmdb-tree-viewer/main/install.sh | bash
 
 set -e
 
@@ -13,8 +13,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-REPO_URL="https://github.com/username/lmdb-tree-viewer"
-RELEASE_URL="https://api.github.com/repos/username/lmdb-tree-viewer/releases/latest"
+REPO_URL="https://github.com/twilson63/lmdb-tree-viewer"
+RELEASE_URL="https://api.github.com/repos/twilson63/lmdb-tree-viewer/releases/latest"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="lmdb-tree-viewer"
 

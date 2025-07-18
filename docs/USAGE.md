@@ -330,7 +330,7 @@ done
 
 If you encounter issues not covered in this guide:
 
-1. Check the [GitHub Issues](https://github.com/username/lmdb-tree-viewer/issues)
-2. Review the [FAQ](https://github.com/username/lmdb-tree-viewer/wiki/FAQ)
-3. Join the [Discussions](https://github.com/username/lmdb-tree-viewer/discussions)
+1. Check the [GitHub Issues](https://github.com/twilson63/lmdb-tree-viewer/issues)
+2. Review the [FAQ](https://github.com/twilson63/lmdb-tree-viewer/wiki/FAQ)
+3. Join the [Discussions](https://github.com/twilson63/lmdb-tree-viewer/discussions)
 4. Create a new issue with detailed information about your problem

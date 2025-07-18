@@ -80,7 +80,7 @@ This is the initial release of LMDB Tree Viewer, a powerful command-line tool fo
 
 **Installation:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/username/lmdb-tree-viewer/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/twilson63/lmdb-tree-viewer/main/install.sh | bash
 ```
 
 **Usage:**

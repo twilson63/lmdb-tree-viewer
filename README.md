@@ -20,12 +20,12 @@ A powerful command-line tool for visualizing LMDB database structure as hierarch
 ### Quick Install (Recommended)
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/username/lmdb-tree-viewer/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/twilson63/lmdb-tree-viewer/main/install.sh | bash
 ```
 
 ### Manual Installation
 
-1. Download the latest release from [GitHub Releases](https://github.com/username/lmdb-tree-viewer/releases)
+1. Download the latest release from [GitHub Releases](https://github.com/twilson63/lmdb-tree-viewer/releases)
 2. Extract the archive
 3. Make the binary executable: `chmod +x lmdb-tree-viewer`
 4. Move to your PATH: `mv lmdb-tree-viewer /usr/local/bin/`
@@ -171,7 +171,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ### Development
 
 ```bash
-git clone https://github.com/username/lmdb-tree-viewer.git
+git clone https://github.com/twilson63/lmdb-tree-viewer.git
 cd lmdb-tree-viewer
 ./lmdb-tree-viewer --help
 ```
@@ -189,8 +189,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- 🐛 [Report Issues](https://github.com/username/lmdb-tree-viewer/issues)
-- 💬 [Discussions](https://github.com/username/lmdb-tree-viewer/discussions)
+- 🐛 [Report Issues](https://github.com/twilson63/lmdb-tree-viewer/issues)
+- 💬 [Discussions](https://github.com/twilson63/lmdb-tree-viewer/discussions)
 - 📧 [Email Support](mailto:support@example.com)
 
 ## Changelog

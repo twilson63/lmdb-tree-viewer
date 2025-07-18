@@ -90,7 +90,7 @@ jobs:
       - name: Build Hype Runtime
         run: |
           # Clone hype repository to get the runtime
-          git clone https://github.com/username/hype.git hype-source
+          git clone https://github.com/twilson63/hype.git hype-source
           cd hype-source
           
           # Build hype for the target platform
