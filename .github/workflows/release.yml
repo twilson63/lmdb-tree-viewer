@@ -11,10 +11,13 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - uses: actions/checkout@v4
       
       - name: Create Release
+        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           body: |
@@ -31,9 +34,8 @@ jobs:
             
             ### Manual Install
             1. Download the appropriate binary for your platform below
-            2. Extract the archive
-            3. Make it executable: `chmod +x lmdb-tree-viewer`
-            4. Move to your PATH: `mv lmdb-tree-viewer /usr/local/bin/`
+            2. Make it executable: `chmod +x lmdb-tree-viewer`
+            3. Move to your PATH: `mv lmdb-tree-viewer /usr/local/bin/`
             
             ### Requirements
             - **mdb_dump**: LMDB utilities package
@@ -50,112 +52,68 @@ jobs:
             # Summary mode
             mdb_dump /path/to/database.lmdb | lmdb-tree-viewer --summary
             ```
-          files: |
-            lmdb-tree-viewer*
-            *.tar.gz
-            *.zip
           draft: false
           prerelease: false
 
-  build-linux:
+  build-binaries:
+    needs: release
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lua5.3
-      
-      - name: Create Linux Binary
-        run: |
-          mkdir -p dist
-          
-          # Create wrapper script
-          cat > dist/lmdb-tree-viewer << 'EOF'
-          #!/bin/bash
-          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-          lua "$SCRIPT_DIR/lmdb-tree-viewer.lua" "$@"
-          EOF
-          
-          # Copy the Lua script
-          cp lmdb-tree-viewer.lua dist/
-          
-          # Make executable
-          chmod +x dist/lmdb-tree-viewer
-          
-          # Create archive
-          cd dist
-          tar -czf ../lmdb-tree-viewer-linux.tar.gz .
-      
-      - name: Upload Linux Archive
-        uses: softprops/action-gh-release@v1
-        with:
-          files: lmdb-tree-viewer-linux.tar.gz
+    strategy:
+      matrix:
+        include:
+          - target: linux-amd64
+            goos: linux
+            goarch: amd64
+          - target: linux-arm64
+            goos: linux
+            goarch: arm64
+          - target: darwin-amd64
+            goos: darwin
+            goarch: amd64
+          - target: darwin-arm64
+            goos: darwin
+            goarch: arm64
+          - target: windows-amd64
+            goos: windows
+            goarch: amd64
 
-  build-macos:
-    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install dependencies
-        run: |
-          brew install lua
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
       
-      - name: Create macOS Binary
+      - name: Build Hype Runtime
         run: |
-          mkdir -p dist
+          # Clone hype repository to get the runtime
+          git clone https://github.com/twilson63/hype.git hype-source
+          cd hype-source
           
-          # Create wrapper script
-          cat > dist/lmdb-tree-viewer << 'EOF'
-          #!/bin/bash
-          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-          lua "$SCRIPT_DIR/lmdb-tree-viewer.lua" "$@"
-          EOF
+          # Build hype for the target platform
+          export GOOS=${{ matrix.goos }}
+          export GOARCH=${{ matrix.goarch }}
+          go build -o ../hype${{ matrix.goos == 'windows' && '.exe' || '' }} .
           
-          # Copy the Lua script
-          cp lmdb-tree-viewer.lua dist/
-          
-          # Make executable
-          chmod +x dist/lmdb-tree-viewer
-          
-          # Create archive
-          cd dist
-          tar -czf ../lmdb-tree-viewer-macos.tar.gz .
+          cd ..
+          rm -rf hype-source
       
-      - name: Upload macOS Archive
+      - name: Build Binary with Hype
+        run: |
+          # Set target extension
+          EXT=""
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
+            EXT=".exe"
+          fi
+          
+          # Build the binary using hype
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} ./hype${{ matrix.goos == 'windows' && '.exe' || '' }} build lmdb-tree-viewer.lua -o lmdb-tree-viewer-${{ matrix.target }}${EXT}
+          
+          # Verify the binary was created
+          ls -la lmdb-tree-viewer-${{ matrix.target }}${EXT}
+      
+      - name: Upload Binary
         uses: softprops/action-gh-release@v1
         with:
-          files: lmdb-tree-viewer-macos.tar.gz
-
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install dependencies
-        run: |
-          choco install lua
-      
-      - name: Create Windows Binary
-        run: |
-          mkdir dist
-          
-          # Create wrapper batch file
-          @'
-          @echo off
-          set SCRIPT_DIR=%~dp0
-          lua "%SCRIPT_DIR%\lmdb-tree-viewer.lua" %*
-          '@ | Out-File -FilePath dist/lmdb-tree-viewer.bat -Encoding ascii
-          
-          # Copy the Lua script
-          copy lmdb-tree-viewer.lua dist/
-          
-          # Create archive
-          cd dist
-          7z a ../lmdb-tree-viewer-windows.zip .
-      
-      - name: Upload Windows Archive
-        uses: softprops/action-gh-release@v1
-        with:
-          files: lmdb-tree-viewer-windows.zip
+          files: lmdb-tree-viewer-${{ matrix.target }}${{ matrix.goos == 'windows' && '.exe' || '' }}
